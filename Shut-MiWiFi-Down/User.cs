@@ -14,6 +14,7 @@ namespace ShutMiWiFiDown
     {
         const string UrlHome = "/cgi-bin/luci/web/home";
         const string UrlLoginPost = "/cgi-bin/luci/api/xqsystem/login";
+        const string UrlStopPppoePost = "/cgi-bin/luci/api/xqnetwork/pppoe_stop";
 
         public string Password { get; set; }
 
@@ -45,14 +46,11 @@ namespace ShutMiWiFiDown
             var mac = Regex.Match(script, @"deviceId = '(.*)'").Groups[1].Value;
 
             var type = 0;
-            var time = (DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000000;
-            var random = (int)(new Random().NextDouble() * 10000);
+            var time = (DateTime.UtcNow.Ticks - 621355968000000000) / 10000000;
+            var random = (int)(new Random().NextDouble() * 9000 + 1000);
 
             var nonce = string.Join("_", type, mac, time, random);
-
-            var sha1 = System.Security.Cryptography.SHA1.Create();
-            var hash = sha1.ComputeHash(Encoding.ASCII.GetBytes(nonce).Concat(sha1.ComputeHash(Encoding.ASCII.GetBytes(Password + key))).ToArray());
-            var pass = string.Join("", hash.Select(c => c.ToString("x")));
+            var pass = SHA1(nonce + SHA1(Password + key));
 
             var postData = BuildPostData(
                 "username", "admin",
@@ -64,9 +62,18 @@ namespace ShutMiWiFiDown
 
             if (response.StatusCode != HttpStatusCode.OK)
                 throw new HttpRequestException("POST response code: " + (int)response.StatusCode);
+
+            var text = await response.Content.ReadAsStringAsync();
         }
 
-        #region [HttpClient Extensions]
+        #region [Utils]
+        public static string SHA1(string text)
+        {
+            var sha1 = new System.Security.Cryptography.SHA1Managed();
+            var hash = sha1.ComputeHash(Encoding.ASCII.GetBytes(text));
+            return string.Join("", hash.Select(c => c.ToString("x2")));
+        }
+
         protected async Task<HttpResponseMessage> GetAsync(string requestUri)
         {
             var response = await Client.GetAsync(requestUri);
