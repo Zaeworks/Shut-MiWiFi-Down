@@ -12,9 +12,11 @@ namespace ShutMiWiFiDown
 {
     public class User
     {
+        const string urlStopPppoePost = "/api/xqnetwork/pppoe_stop";
+
         const string UrlHome = "/cgi-bin/luci/web/home";
         const string UrlLoginPost = "/cgi-bin/luci/api/xqsystem/login";
-        const string UrlStopPppoePost = "/cgi-bin/luci/api/xqnetwork/pppoe_stop";
+        protected string UrlStopPppoePost => "/cgi-bin/luci" + Token + urlStopPppoePost;
 
         public string Password { get; set; }
 
@@ -24,6 +26,8 @@ namespace ShutMiWiFiDown
         public CookieContainer Cookies => _cookies;
 
         protected HttpClient Client = null;
+
+        protected string Token = ""; // "/;stok="
 
         protected User() { }
 
@@ -64,6 +68,11 @@ namespace ShutMiWiFiDown
                 throw new HttpRequestException("POST response code: " + (int)response.StatusCode);
 
             var text = await response.Content.ReadAsStringAsync();
+            var token = Regex.Match(text, "\"token\":\"(.*)\"").Groups[1].Value;
+            if (token.Length > 0)
+                Token = "/;stok=" + token;
+            else
+                throw new Exception("Login failed");
         }
 
         #region [Utils]
