@@ -75,6 +75,14 @@ namespace ShutMiWiFiDown
                 throw new Exception("Login failed");
         }
 
+        public async Task StopPppoeAsync()
+        {
+            var response = await Client.PostAsync(UrlStopPppoePost, null);
+
+            if (response.StatusCode != HttpStatusCode.OK)
+                throw new HttpRequestException("POST response code: " + (int)response.StatusCode);
+        }
+
         #region [Utils]
         public static string SHA1(string text)
         {
